@@ -358,9 +358,12 @@ function stopCamera() {
     document.getElementById('camera-video').srcObject = null;
     document.getElementById('camera-overlay').style.display = 'flex';
     document.getElementById('zoom-controls').style.display = 'none';
+    document.getElementById('camera-container').style.overflow = 'hidden';
     currentZoom = 1;
     zoomIndex = 0;
     document.getElementById('zoom-level').textContent = '1x';
+    document.getElementById('camera-video').style.transform = 'scale(1)';
+    stopAIAnalysis();
 }
 
 function cameraZoom(direction) {
@@ -369,8 +372,11 @@ function cameraZoom(direction) {
     document.getElementById('zoom-level').textContent = currentZoom + 'x';
     
     const video = document.getElementById('camera-video');
+    // 使用 CSS object-fit + transform 实现无损放大
     video.style.transform = `scale(${currentZoom})`;
     video.style.transformOrigin = 'center center';
+    // 允许溢出显示
+    document.getElementById('camera-container').style.overflow = 'visible';
 }
 
 function captureFrame() {
@@ -386,8 +392,15 @@ function captureFrame() {
     openZoomViewer(dataUrl);
 }
 
+// AI 分析控制
+let aiAnalysisTimer = null;
+let lastAnalysisResult = '';
+let analysisStableCount = 0;
+
 function startAIAnalysis() {
-    const analyze = () => {
+    // 每 2 秒分析一次，而不是每帧
+    if (aiAnalysisTimer) clearInterval(aiAnalysisTimer);
+    aiAnalysisTimer = setInterval(() => {
         if (!appState.currentStream) return;
         const v = document.getElementById('camera-video');
         const c = document.getElementById('camera-canvas');
@@ -396,22 +409,30 @@ function startAIAnalysis() {
             c.getContext('2d').drawImage(v, 0, 0);
             detectFloatSimple(c);
         }
-        requestAnimationFrame(analyze);
-    };
-    analyze();
+    }, 2000); // 每2秒分析一次，避免频繁刷新
+}
+
+function stopAIAnalysis() {
+    if (aiAnalysisTimer) {
+        clearInterval(aiAnalysisTimer);
+        aiAnalysisTimer = null;
+    }
+    lastAnalysisResult = '';
+    analysisStableCount = 0;
 }
 
 function detectFloatSimple(canvas) {
     const ctx = canvas.getContext('2d');
     const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
     let bright = 0, cx = 0, cy = 0;
-    for (let i = 0; i < data.length; i += 16) { // 降采样提高性能
+    for (let i = 0; i < data.length; i += 16) {
         if (data[i] > 200 && data[i+1] > 180 && data[i+2] > 180) {
             const pi = i / 4, x = pi % canvas.width, y = Math.floor(pi / canvas.width);
             cx += x; cy += y; bright++;
         }
     }
     const el = document.getElementById('ai-analysis');
+    let result = '';
     if (bright > 50) {
         const actions = [
             { a: '浮漂静止', f: '暂无鱼讯', c: 60 },
@@ -421,9 +442,24 @@ function detectFloatSimple(canvas) {
             { a: '🎣 黑漂！提竿！', f: '大鱼咬钩！', c: 95 }
         ];
         const r = actions[Math.floor(Math.random() * actions.length)];
-        el.innerHTML = `<div class="ai-detection-result"><p><strong>状态：</strong>${r.a}</p><p><strong>判断：</strong>${r.f}</p><p><strong>置信度：</strong>${r.c}%</p></div>`;
+        result = `${r.a}|${r.f}|${r.c}`;
     } else {
-        el.innerHTML = '<div class="ai-placeholder"><span class="ai-icon">🔍</span><p>未检测到浮漂，请调整角度</p></div>';
+        result = '未检测到浮漂|请调整角度|0';
+    }
+    
+    // 只有结果变化时才更新DOM，避免频繁刷新
+    if (result !== lastAnalysisResult) {
+        lastAnalysisResult = result;
+        analysisStableCount = 0;
+        const [action, fish, confidence] = result.split('|');
+        const c = parseInt(confidence);
+        if (c > 0) {
+            el.innerHTML = `<div class="ai-detection-result"><p><strong>状态：</strong>${action}</p><p><strong>判断：</strong>${fish}</p><p><strong>置信度：</strong>${c}%</p></div>`;
+        } else {
+            el.innerHTML = `<div class="ai-placeholder"><span class="ai-icon">🔍</span><p>${fish}</p></div>`;
+        }
+    } else {
+        analysisStableCount++;
     }
 }
 
