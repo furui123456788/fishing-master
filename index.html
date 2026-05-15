@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="钓鱼助手">
+    <meta name="theme-color" content="#667eea">
+    <meta name="description" content="AI驱动的智能钓鱼决策系统">
+    <title>智能钓鱼助手</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- 顶部状态栏 -->
+        <header class="header">
+            <h1>🎣 钓鱼助手</h1>
+        </header>
+
+        <!-- 页面内容区域（可切换） -->
+        <main class="main-content">
+
+            <!-- ========== 页面1：首页（天气+钓鱼指数+推荐） ========== -->
+            <div class="page active" id="page-home">
+                <!-- 环境设置（可折叠） -->
+                <section class="panel">
+                    <div class="panel-header" onclick="toggleSection('env-settings')">
+                        <h2>📍 钓鱼环境</h2>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                    <div id="env-settings" class="panel-body">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>钓点位置</label>
+                                <input type="text" id="location" placeholder="点击定位">
+                            </div>
+                            <button class="btn-locate" onclick="getLocation()">📍</button>
+                        </div>
+                        <div class="form-row-2">
+                            <div class="form-group">
+                                <label>钓场</label>
+                                <select id="fishing-type">
+                                    <option value="wild">野钓</option>
+                                    <option value="pond">黑坑</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>水域</label>
+                                <select id="water-type">
+                                    <option value="small">小河道</option>
+                                    <option value="medium">湖泊</option>
+                                    <option value="large">水库</option>
+                                    <option value="sea">海水</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row-2">
+                            <div class="form-group">
+                                <label>水质</label>
+                                <select id="water-quality">
+                                    <option value="clear">清澈</option>
+                                    <option value="normal">正常</option>
+                                    <option value="turbid">浑浊</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>目标鱼</label>
+                                <select id="target-fish">
+                                    <option value="carp">鲫鱼/鲤鱼</option>
+                                    <option value="grass">草鱼</option>
+                                    <option value="silver">鲢鳙</option>
+                                    <option value="black">黑鱼</option>
+                                    <option value="catfish">鲶鱼</option>
+                                    <option value="bass">鲈鱼</option>
+                                    <option value="any">综合</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button class="btn-primary" onclick="analyzeConditions()">🔍 开始分析</button>
+                    </div>
+                </section>
+
+                <!-- 天气卡片 -->
+                <section class="panel">
+                    <div class="weather-card">
+                        <div class="weather-top">
+                            <span class="weather-icon" id="weather-icon-display">☀️</span>
+                            <div class="weather-temp">
+                                <span class="temperature" id="temp-display">--°C</span>
+                                <span class="weather-desc" id="weather-desc">获取天气中...</span>
+                            </div>
+                        </div>
+                        <div class="weather-grid">
+                            <div class="weather-item">
+                                <span class="w-label">💧 湿度</span>
+                                <span class="w-value" id="humidity">--%</span>
+                            </div>
+                            <div class="weather-item">
+                                <span class="w-label">🌡️ 气压</span>
+                                <span class="w-value" id="pressure">--</span>
+                            </div>
+                            <div class="weather-item">
+                                <span class="w-label">💨 风速</span>
+                                <span class="w-value" id="wind">--</span>
+                            </div>
+                            <div class="weather-item">
+                                <span class="w-label">🌧️ 降水</span>
+                                <span class="w-value" id="precipitation">--</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 钓鱼指数 -->
+                <section class="panel">
+                    <div class="index-card">
+                        <div class="index-left">
+                            <div class="index-circle" id="index-circle">
+                                <span class="index-value" id="index-value">--</span>
+                            </div>
+                            <div class="index-desc" id="index-desc">点击分析</div>
+                        </div>
+                        <div class="index-right">
+                            <div class="best-time" id="best-time">
+                                <span class="bt-label">⏰ 最佳时段</span>
+                                <span class="bt-value">--</span>
+                            </div>
+                            <div class="fish-forecast" id="fish-forecast">
+                                <span class="bt-label">🐟 鱼情预测</span>
+                                <span class="bt-value">--</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 推荐卡片 -->
+                <section class="panel" id="recommendations" style="display:none;">
+                    <h2>🎯 智能推荐</h2>
+                    <div class="rec-tabs">
+                        <button class="rec-tab active" onclick="switchRecTab('bait', this)">🪱 饵料</button>
+                        <button class="rec-tab" onclick="switchRecTab('rod', this)">🎣 鱼竿</button>
+                        <button class="rec-tab" onclick="switchRecTab('float', this)">📏 调漂</button>
+                        <button class="rec-tab" onclick="switchRecTab('tech', this)">💡 技巧</button>
+                    </div>
+                    <div class="rec-content" id="rec-bait">
+                        <div id="bait-recommendation"></div>
+                    </div>
+                    <div class="rec-content" id="rec-rod" style="display:none;">
+                        <div id="rod-recommendation"></div>
+                    </div>
+                    <div class="rec-content" id="rec-float" style="display:none;">
+                        <div id="float-recommendation"></div>
+                    </div>
+                    <div class="rec-content" id="rec-tech" style="display:none;">
+                        <div id="technique-recommendation"></div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- ========== 页面2：AI浮漂识别 ========== -->
+            <div class="page" id="page-ai">
+                <section class="panel">
+                    <h2>🤖 AI 浮漂识别</h2>
+                    <div class="camera-wrapper">
+                        <video id="camera-video" autoplay playsinline muted></video>
+                        <canvas id="camera-canvas" style="display:none;"></canvas>
+                        <div class="camera-overlay" id="camera-overlay">
+                            <span>📹 点击下方按钮开启</span>
+                        </div>
+                    </div>
+                    <div class="camera-btns">
+                        <button class="cam-btn cam-start" onclick="startCamera()">开启摄像头</button>
+                        <button class="cam-btn cam-capture" onclick="captureFrame()">📸 拍照</button>
+                        <button class="cam-btn cam-stop" onclick="stopCamera()">关闭</button>
+                    </div>
+                </section>
+                <section class="panel">
+                    <h2>📋 识别结果</h2>
+                    <div id="ai-analysis" class="ai-result">
+                        <div class="ai-placeholder">
+                            <span class="ai-icon">🔍</span>
+                            <p>开启摄像头后，AI 将实时分析浮漂动作</p>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- ========== 页面3：拍照分享 ========== -->
+            <div class="page" id="page-photo">
+                <section class="panel">
+                    <h2>📷 上鱼拍照</h2>
+                    <div class="upload-area" id="upload-area">
+                        <input type="file" id="fish-photo" accept="image/*" onchange="loadPhoto(event)">
+                        <label for="fish-photo" class="upload-label">
+                            <span class="upload-icon">📸</span>
+                            <span>点击拍照或选择照片</span>
+                            <small>支持从相册选择</small>
+                        </label>
+                    </div>
+                </section>
+                <section class="panel" id="editor-area" style="display:none;">
+                    <h2>✨ 照片编辑</h2>
+                    <canvas id="photo-canvas"></canvas>
+                    <div class="editor-sliders">
+                        <div class="slider-group">
+                            <label>🐟 放大鱼 <span id="size-val">0%</span></label>
+                            <input type="range" id="size-boost" min="0" max="100" value="0" oninput="document.getElementById('size-val').textContent=this.value+'%'">
+                        </div>
+                        <div class="slider-group">
+                            <label>◐ 对比度 <span id="contrast-val">100%</span></label>
+                            <input type="range" id="contrast" min="50" max="200" value="100" oninput="document.getElementById('contrast-val').textContent=this.value+'%'">
+                        </div>
+                        <div class="slider-group">
+                            <label>🎨 饱和度 <span id="sat-val">100%</span></label>
+                            <input type="range" id="saturation" min="50" max="200" value="100" oninput="document.getElementById('sat-val').textContent=this.value+'%'">
+                        </div>
+                        <div class="slider-group">
+                            <label>🏷️ 水印</label>
+                            <label class="switch"><input type="checkbox" id="add-watermark" checked><span class="slider-toggle"></span></label>
+                        </div>
+                    </div>
+                    <div class="editor-btns">
+                        <button class="btn-apply" onclick="applyEffects()">✨ 应用效果</button>
+                        <button class="btn-share" onclick="sharePhoto()">📤 分享</button>
+                        <button class="btn-save" onclick="downloadPhoto()">💾 保存</button>
+                    </div>
+                </section>
+            </div>
+
+            <!-- ========== 页面4：我的 ========== -->
+            <div class="page" id="page-profile">
+                <section class="panel">
+                    <div class="profile-header">
+                        <div class="avatar">🎣</div>
+                        <div class="profile-info">
+                            <h2>钓鱼达人</h2>
+                            <p>今日钓鱼指数：<span id="profile-index">--</span></p>
+                        </div>
+                    </div>
+                </section>
+                <section class="panel">
+                    <h2>📊 钓鱼记录</h2>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <span class="stat-num" id="stat-total">0</span>
+                            <span class="stat-label">出钓次数</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-num" id="stat-fish">0</span>
+                            <span class="stat-label">上鱼总数</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-num" id="stat-biggest">--</span>
+                            <span class="stat-label">最大鱼(斤)</span>
+                        </div>
+                    </div>
+                </section>
+                <section class="panel">
+                    <h2>⚙️ 设置</h2>
+                    <div class="settings-list">
+                        <div class="setting-item" onclick="installApp()">
+                            <span>📲 安装到桌面</span>
+                            <span class="setting-arrow">›</span>
+                        </div>
+                        <div class="setting-item" onclick="clearCache()">
+                            <span>🗑️ 清除缓存</span>
+                            <span class="setting-arrow">›</span>
+                        </div>
+                        <div class="setting-item">
+                            <span>ℹ️ 关于</span>
+                            <span class="setting-arrow">›</span>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+
+        <!-- 底部导航栏 -->
+        <nav class="bottom-nav">
+            <button class="nav-btn active" onclick="switchPage('home', this)">
+                <span class="nav-icon">🏠</span>
+                <span class="nav-label">首页</span>
+            </button>
+            <button class="nav-btn" onclick="switchPage('ai', this)">
+                <span class="nav-icon">🤖</span>
+                <span class="nav-label">识别</span>
+            </button>
+            <button class="nav-btn nav-center" onclick="switchPage('photo', this)">
+                <span class="nav-icon">📷</span>
+                <span class="nav-label">拍照</span>
+            </button>
+            <button class="nav-btn" onclick="switchPage('profile', this)">
+                <span class="nav-icon">👤</span>
+                <span class="nav-label">我的</span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- 分享模态框 -->
+    <div id="share-modal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <h2>🎉 上鱼分享</h2>
+            <div class="share-preview">
+                <img id="share-image" src="" alt="上鱼照片">
+            </div>
+            <div class="share-info">
+                <input type="text" id="fish-type" placeholder="鱼种（如：鲤鱼）">
+                <input type="text" id="fish-weight" placeholder="重量（斤）">
+                <textarea id="share-text" placeholder="分享你的钓鱼心得..."></textarea>
+            </div>
+            <div class="share-buttons">
+                <button class="share-btn wechat" onclick="shareToWeChat()">微信</button>
+                <button class="share-btn weibo" onclick="shareToWeibo()">微博</button>
+                <button class="share-btn qq" onclick="shareToQQ()">QQ</button>
+                <button class="share-btn cancel" onclick="closeModal()">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 安装提示 -->
+    <div id="install-banner" class="install-banner" style="display:none;">
+        <span>📲 添加到主屏幕，获得更好的体验</span>
+        <button onclick="installApp()">安装</button>
+        <button onclick="dismissInstall()">✕</button>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
