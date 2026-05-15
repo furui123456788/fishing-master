@@ -335,6 +335,65 @@ let currentZoom = 1;
 const ZOOM_LEVELS = [1, 1.5, 2, 3, 4, 5];
 let zoomIndex = 0;
 
+// 浮漂标注框拖动
+let isDraggingMarker = false;
+let markerStartX = 0, markerStartY = 0;
+let markerLeft = 0, markerTop = 0;
+
+function initMarkerDrag() {
+    const marker = document.getElementById('float-marker');
+    const box = document.getElementById('marker-box');
+    
+    function onStart(e) {
+        isDraggingMarker = true;
+        const touch = e.touches ? e.touches[0] : e;
+        const rect = marker.getBoundingClientRect();
+        markerStartX = touch.clientX - rect.left;
+        markerStartY = touch.clientY - rect.top;
+        box.style.cursor = 'grabbing';
+        // 隐藏拖动提示
+        const hint = document.getElementById('marker-drag-hint');
+        if (hint) hint.style.display = 'none';
+        e.preventDefault();
+    }
+    
+    function onMove(e) {
+        if (!isDraggingMarker) return;
+        const touch = e.touches ? e.touches[0] : e;
+        const container = document.getElementById('camera-container');
+        const containerRect = container.getBoundingClientRect();
+        
+        let newLeft = touch.clientX - containerRect.left - markerStartX;
+        let newTop = touch.clientY - containerRect.top - markerStartY;
+        
+        // 限制在容器内
+        newLeft = Math.max(0, Math.min(containerRect.width - 60, newLeft));
+        newTop = Math.max(0, Math.min(containerRect.height - 60, newTop));
+        
+        markerLeft = newLeft;
+        markerTop = newTop;
+        marker.style.left = newLeft + 'px';
+        marker.style.top = newTop + 'px';
+        e.preventDefault();
+    }
+    
+    function onEnd() {
+        isDraggingMarker = false;
+        box.style.cursor = 'grab';
+        // 保存位置到 localStorage
+        try {
+            localStorage.setItem('markerPos', JSON.stringify({ left: markerLeft, top: markerTop }));
+        } catch(e) {}
+    }
+    
+    box.addEventListener('mousedown', onStart);
+    box.addEventListener('touchstart', onStart, { passive: false });
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('touchmove', onMove, { passive: false });
+    document.addEventListener('mouseup', onEnd);
+    document.addEventListener('touchend', onEnd);
+}
+
 async function startCamera() {
     try {
         const stream = await navigator.mediaDevices.getUserMedia({
@@ -344,6 +403,32 @@ async function startCamera() {
         document.getElementById('camera-video').srcObject = stream;
         document.getElementById('camera-overlay').style.display = 'none';
         document.getElementById('zoom-controls').style.display = 'flex';
+        
+        // 显示标注框在画面中间
+        const marker = document.getElementById('float-marker');
+        const container = document.getElementById('camera-container');
+        const containerRect = container.getBoundingClientRect();
+        
+        // 尝试恢复上次位置
+        let pos = null;
+        try { pos = JSON.parse(localStorage.getItem('markerPos')); } catch(e) {}
+        
+        if (pos && pos.left > 0 && pos.top > 0) {
+            marker.style.left = pos.left + 'px';
+            marker.style.top = pos.top + 'px';
+            document.getElementById('marker-drag-hint').style.display = 'none';
+        } else {
+            // 默认放在画面中间
+            const left = (containerRect.width - 60) / 2;
+            const top = (containerRect.height - 60) / 2;
+            marker.style.left = left + 'px';
+            marker.style.top = top + 'px';
+        }
+        marker.style.display = 'block';
+        
+        // 初始化拖动
+        initMarkerDrag();
+        
         startAIAnalysis();
     } catch {
         alert('无法访问摄像头，请检查权限');
@@ -423,56 +508,31 @@ function stopAIAnalysis() {
 }
 
 function detectFloatSimple(canvas) {
-    const ctx = canvas.getContext('2d');
-    const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-    let bright = 0, cx = 0, cy = 0;
-    for (let i = 0; i < data.length; i += 16) {
-        if (data[i] > 200 && data[i+1] > 180 && data[i+2] > 180) {
-            const pi = i / 4, x = pi % canvas.width, y = Math.floor(pi / canvas.width);
-            cx += x; cy += y; bright++;
-        }
-    }
     const el = document.getElementById('ai-analysis');
-    const marker = document.getElementById('float-marker');
     const markerLabel = document.getElementById('marker-label');
-    let result = '';
-    if (bright > 50) {
-        // 计算浮漂在画面中的位置百分比
-        const avgX = cx / bright / canvas.width * 100;
-        const avgY = cy / bright / canvas.height * 100;
-        
-        // 移动标注框到浮漂位置
-        marker.style.display = 'block';
-        marker.style.left = `calc(${avgX}% - 30px)`;
-        marker.style.top = `calc(${avgY}% - 30px)`;
-
-        const actions = [
-            { a: '浮漂静止', f: '暂无鱼讯', c: 60, color: '#888' },
-            { a: '轻微晃动', f: '小鱼试探', c: 72, color: '#f59e0b' },
-            { a: '⚠️ 下沉顿口！', f: '鲫鱼/鲤鱼咬钩', c: 88, color: '#ef4444' },
-            { a: '⚠️ 上顶！', f: '鲫鱼接口', c: 80, color: '#3b82f6' },
-            { a: '🎣 黑漂！提竿！', f: '大鱼咬钩！', c: 95, color: '#ef4444' }
-        ];
-        const r = actions[Math.floor(Math.random() * actions.length)];
-        result = `${r.a}|${r.f}|${r.c}|${r.color}`;
-        markerLabel.textContent = r.f;
-        marker.querySelector('.marker-box').style.borderColor = r.color;
-        markerLabel.style.background = r.color;
-    } else {
-        marker.style.display = 'none';
-        result = '未检测到浮漂|请调整角度|0|#888';
-    }
+    const markerBox = document.getElementById('marker-box');
     
-    // 只有结果变化时才更新DOM
+    // 随机模拟分析结果（实际使用时替换为真实AI分析）
+    const actions = [
+        { a: '浮漂静止', f: '暂无鱼讯', c: 60, color: '#888' },
+        { a: '轻微晃动', f: '小鱼试探', c: 72, color: '#f59e0b' },
+        { a: '⚠️ 下沉顿口！', f: '鲫鱼/鲤鱼咬钩', c: 88, color: '#ef4444' },
+        { a: '⚠️ 上顶！', f: '鲫鱼接口', c: 80, color: '#3b82f6' },
+        { a: '🎣 黑漂！提竿！', f: '大鱼咬钩！', c: 95, color: '#ef4444' }
+    ];
+    const r = actions[Math.floor(Math.random() * actions.length)];
+    const result = `${r.a}|${r.f}|${r.c}|${r.color}`;
+    
+    // 更新标注框标签和颜色
+    markerLabel.textContent = r.f;
+    markerBox.style.borderColor = r.color;
+    markerLabel.style.background = r.color;
+    
+    // 只有结果变化时才更新文字
     if (result !== lastAnalysisResult) {
         lastAnalysisResult = result;
-        const [action, fish, confidence, color] = result.split('|');
-        const c = parseInt(confidence);
-        if (c > 0) {
-            el.innerHTML = `<div class="ai-detection-result"><p><strong>🎯 ${action}</strong></p><p><strong>鱼种：</strong>${fish}</p><p><strong>置信度：</strong>${c}%</p></div>`;
-        } else {
-            el.innerHTML = `<div class="ai-placeholder"><span class="ai-icon">🔍</span><p>${fish}</p></div>`;
-        }
+        const [action, fish, confidence] = [r.a, r.f, r.c];
+        el.innerHTML = `<div class="ai-detection-result"><p><strong>🎯 ${action}</strong></p><p><strong>鱼种：</strong>${fish}</p><p><strong>置信度：</strong>${confidence}%</p></div>`;
     }
 }
 

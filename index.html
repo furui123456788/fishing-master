@@ -170,9 +170,10 @@
                         <div class="camera-overlay" id="camera-overlay">
                             <span>📹 点击下方按钮开启</span>
                         </div>
-                        <!-- 浮漂标注框 -->
+                        <!-- 浮漂标注框（用户可拖动） -->
                         <div class="float-marker" id="float-marker" style="display:none;">
-                            <div class="marker-box">
+                            <div class="marker-drag-hint" id="marker-drag-hint">👆 拖动到浮漂位置</div>
+                            <div class="marker-box" id="marker-box">
                                 <div class="marker-label" id="marker-label">浮漂</div>
                                 <div class="marker-crosshair"></div>
                             </div>
