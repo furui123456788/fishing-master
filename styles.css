@@ -248,33 +248,37 @@ body {
     touch-action: none;
 }
 
-/* AI 结果叠加在画面上 */
+/* AI 结果叠加在画面上（紧凑版） */
 .ai-overlay {
     position: absolute;
-    top: 8px; left: 8px; right: 8px;
-    background: rgba(0,0,0,0.65);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-    border-radius: 8px;
-    padding: 10px 12px;
+    top: 6px; left: 6px;
+    background: rgba(0,0,0,0.55);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    border-radius: 6px;
+    padding: 6px 10px;
     color: white;
     z-index: 20;
     pointer-events: none;
+    max-width: 55%;
 }
 .ai-overlay .ai-placeholder { 
-    color: rgba(255,255,255,0.6); 
-    padding: 4px 0; 
+    color: rgba(255,255,255,0.5); 
+    padding: 0; 
     text-align: left;
+    font-size: 11px;
 }
 .ai-overlay .ai-icon { 
-    color: rgba(255,255,255,0.7); 
-    font-size: 20px; 
-    margin-bottom: 2px; 
+    color: rgba(255,255,255,0.6); 
+    font-size: 16px; 
+    margin-bottom: 0; 
+    display: inline;
 }
 .ai-overlay .ai-detection-result p { 
-    color: rgba(255,255,255,0.95); 
-    font-size: 13px; 
-    line-height: 1.7; 
+    color: rgba(255,255,255,0.9); 
+    font-size: 11px; 
+    line-height: 1.5; 
+    margin: 0;
 }
 .ai-overlay .ai-detection-result strong { color: #fff; }
 
