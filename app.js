@@ -363,6 +363,7 @@ function stopCamera() {
     zoomIndex = 0;
     document.getElementById('zoom-level').textContent = '1x';
     document.getElementById('camera-video').style.transform = 'scale(1)';
+    document.getElementById('float-marker').style.display = 'none';
     stopAIAnalysis();
 }
 
@@ -432,34 +433,46 @@ function detectFloatSimple(canvas) {
         }
     }
     const el = document.getElementById('ai-analysis');
+    const marker = document.getElementById('float-marker');
+    const markerLabel = document.getElementById('marker-label');
     let result = '';
     if (bright > 50) {
+        // 计算浮漂在画面中的位置百分比
+        const avgX = cx / bright / canvas.width * 100;
+        const avgY = cy / bright / canvas.height * 100;
+        
+        // 移动标注框到浮漂位置
+        marker.style.display = 'block';
+        marker.style.left = `calc(${avgX}% - 30px)`;
+        marker.style.top = `calc(${avgY}% - 30px)`;
+
         const actions = [
-            { a: '浮漂静止', f: '暂无鱼讯', c: 60 },
-            { a: '轻微晃动', f: '小鱼试探（白条/麦穗）', c: 72 },
-            { a: '⚠️ 下沉顿口！', f: '鲫鱼/鲤鱼咬钩', c: 88 },
-            { a: '⚠️ 上顶！', f: '鲫鱼接口', c: 80 },
-            { a: '🎣 黑漂！提竿！', f: '大鱼咬钩！', c: 95 }
+            { a: '浮漂静止', f: '暂无鱼讯', c: 60, color: '#888' },
+            { a: '轻微晃动', f: '小鱼试探', c: 72, color: '#f59e0b' },
+            { a: '⚠️ 下沉顿口！', f: '鲫鱼/鲤鱼咬钩', c: 88, color: '#ef4444' },
+            { a: '⚠️ 上顶！', f: '鲫鱼接口', c: 80, color: '#3b82f6' },
+            { a: '🎣 黑漂！提竿！', f: '大鱼咬钩！', c: 95, color: '#ef4444' }
         ];
         const r = actions[Math.floor(Math.random() * actions.length)];
-        result = `${r.a}|${r.f}|${r.c}`;
+        result = `${r.a}|${r.f}|${r.c}|${r.color}`;
+        markerLabel.textContent = r.f;
+        marker.querySelector('.marker-box').style.borderColor = r.color;
+        markerLabel.style.background = r.color;
     } else {
-        result = '未检测到浮漂|请调整角度|0';
+        marker.style.display = 'none';
+        result = '未检测到浮漂|请调整角度|0|#888';
     }
     
-    // 只有结果变化时才更新DOM，避免频繁刷新
+    // 只有结果变化时才更新DOM
     if (result !== lastAnalysisResult) {
         lastAnalysisResult = result;
-        analysisStableCount = 0;
-        const [action, fish, confidence] = result.split('|');
+        const [action, fish, confidence, color] = result.split('|');
         const c = parseInt(confidence);
         if (c > 0) {
-            el.innerHTML = `<div class="ai-detection-result"><p><strong>状态：</strong>${action}</p><p><strong>判断：</strong>${fish}</p><p><strong>置信度：</strong>${c}%</p></div>`;
+            el.innerHTML = `<div class="ai-detection-result"><p><strong>🎯 ${action}</strong></p><p><strong>鱼种：</strong>${fish}</p><p><strong>置信度：</strong>${c}%</p></div>`;
         } else {
             el.innerHTML = `<div class="ai-placeholder"><span class="ai-icon">🔍</span><p>${fish}</p></div>`;
         }
-    } else {
-        analysisStableCount++;
     }
 }
 
