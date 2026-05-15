@@ -507,32 +507,120 @@ function stopAIAnalysis() {
     analysisStableCount = 0;
 }
 
+// 浮漂检测状态
+let floatDetector = {
+    prevFrame: null,
+    floatPos: null,
+    motionHistory: [],
+    stableCount: 0
+};
+
 function detectFloatSimple(canvas) {
+    const ctx = canvas.getContext('2d');
+    const width = canvas.width;
+    const height = canvas.height;
+    const imageData = ctx.getImageData(0, 0, width, height);
+    const data = imageData.data;
+    
     const el = document.getElementById('ai-analysis');
     const markerLabel = document.getElementById('marker-label');
     const markerBox = document.getElementById('marker-box');
     
-    // 随机模拟分析结果（实际使用时替换为真实AI分析）
-    const actions = [
-        { a: '浮漂静止', f: '暂无鱼讯', c: 60, color: '#888' },
-        { a: '轻微晃动', f: '小鱼试探', c: 72, color: '#f59e0b' },
-        { a: '⚠️ 下沉顿口！', f: '鲫鱼/鲤鱼咬钩', c: 88, color: '#ef4444' },
-        { a: '⚠️ 上顶！', f: '鲫鱼接口', c: 80, color: '#3b82f6' },
-        { a: '🎣 黑漂！提竿！', f: '大鱼咬钩！', c: 95, color: '#ef4444' }
-    ];
-    const r = actions[Math.floor(Math.random() * actions.length)];
-    const result = `${r.a}|${r.f}|${r.c}|${r.color}`;
+    // 1. 检测浮漂（红色/橙色/黄色醒目颜色）
+    let floatPixels = [];
+    for (let y = 0; y < height; y += 4) {
+        for (let x = 0; x < width; x += 4) {
+            const i = (y * width + x) * 4;
+            const r = data[i], g = data[i+1], b = data[i+2];
+            
+            // 检测红色/橙色/黄色浮漂（常见浮漂颜色）
+            const isRed = r > 150 && g < 100 && b < 100;
+            const isOrange = r > 180 && g > 80 && g < 150 && b < 80;
+            const isYellow = r > 200 && g > 180 && b < 100;
+            const isBright = r > 220 && g > 220 && b > 220; // 白色浮漂
+            
+            if (isRed || isOrange || isYellow || isBright) {
+                floatPixels.push({ x, y, r, g, b });
+            }
+        }
+    }
     
-    // 更新标注框标签和颜色
-    markerLabel.textContent = r.f;
-    markerBox.style.borderColor = r.color;
-    markerLabel.style.background = r.color;
-    
-    // 只有结果变化时才更新文字
-    if (result !== lastAnalysisResult) {
-        lastAnalysisResult = result;
-        const [action, fish, confidence] = [r.a, r.f, r.c];
-        el.innerHTML = `<div class="ai-detection-result"><p><strong>🎯 ${action}</strong></p><p><strong>鱼种：</strong>${fish}</p><p><strong>置信度：</strong>${confidence}%</p></div>`;
+    // 2. 如果检测到足够的浮漂像素
+    if (floatPixels.length > 20) {
+        // 计算浮漂中心位置
+        let sumX = 0, sumY = 0;
+        floatPixels.forEach(p => { sumX += p.x; sumY += p.y; });
+        const centerX = sumX / floatPixels.length;
+        const centerY = sumY / floatPixels.length;
+        
+        // 3. 运动检测 - 与上一帧比较
+        let motion = 0;
+        if (floatDetector.prevFrame) {
+            const prevPos = floatDetector.prevFrame;
+            motion = Math.sqrt(Math.pow(centerX - prevPos.x, 2) + Math.pow(centerY - prevPos.y, 2));
+        }
+        
+        // 保存当前位置
+        floatDetector.prevFrame = { x: centerX, y: centerY };
+        floatDetector.motionHistory.push(motion);
+        if (floatDetector.motionHistory.length > 10) {
+            floatDetector.motionHistory.shift();
+        }
+        
+        // 4. 分析运动模式
+        const avgMotion = floatDetector.motionHistory.reduce((a, b) => a + b, 0) / floatDetector.motionHistory.length;
+        const recentMotion = floatDetector.motionHistory.slice(-3).reduce((a, b) => a + b, 0) / 3;
+        
+        let result;
+        if (motion > 15 && recentMotion > avgMotion * 1.5) {
+            // 快速下沉 - 黑漂/顿口
+            result = { a: '🎣 黑漂！提竿！', f: '大鱼咬钩', c: 92, color: '#ef4444' };
+            floatDetector.stableCount = 0;
+        } else if (motion > 8 && centerY > floatDetector.prevFrame?.y + 5) {
+            // 下沉动作 - 顿口
+            result = { a: '⚠️ 下沉顿口！', f: '鲫鱼/鲤鱼', c: 85, color: '#ef4444' };
+            floatDetector.stableCount = 0;
+        } else if (motion > 8 && centerY < floatDetector.prevFrame?.y - 5) {
+            // 上浮动作 - 上顶
+            result = { a: '⚠️ 上顶！', f: '鲫鱼接口', c: 80, color: '#3b82f6' };
+            floatDetector.stableCount = 0;
+        } else if (motion > 3) {
+            // 轻微晃动
+            result = { a: '轻微晃动', f: '小鱼试探', c: 65, color: '#f59e0b' };
+            floatDetector.stableCount = 0;
+        } else {
+            // 静止
+            floatDetector.stableCount++;
+            if (floatDetector.stableCount > 5) {
+                result = { a: '浮漂静止', f: '暂无鱼讯', c: 50, color: '#888' };
+            } else {
+                result = { a: '监测中...', f: '观察浮漂', c: 55, color: '#667eea' };
+            }
+        }
+        
+        // 更新UI
+        markerLabel.textContent = result.f;
+        markerBox.style.borderColor = result.color;
+        markerLabel.style.background = result.color;
+        
+        const resultStr = `${result.a}|${result.f}|${result.c}`;
+        if (resultStr !== lastAnalysisResult) {
+            lastAnalysisResult = resultStr;
+            el.innerHTML = `<div class="ai-detection-result"><p><strong>🎯 ${result.a}</strong></p><p><strong>鱼种：</strong>${result.f}</p><p><strong>置信度：</strong>${result.c}%</p></div>`;
+        }
+    } else {
+        // 未检测到浮漂
+        markerLabel.textContent = '未找到';
+        markerBox.style.borderColor = '#888';
+        markerLabel.style.background = '#888';
+        
+        const result = '未检测到浮漂|请对准浮漂|0';
+        if (result !== lastAnalysisResult) {
+            lastAnalysisResult = result;
+            el.innerHTML = `<div class="ai-placeholder"><p>🔍 未检测到浮漂</p><p style="font-size:10px;">请将摄像头对准浮漂</p></div>`;
+        }
+        floatDetector.prevFrame = null;
+        floatDetector.motionHistory = [];
     }
 }
 
