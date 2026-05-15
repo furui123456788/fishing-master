@@ -496,6 +496,50 @@ body {
 .install-banner button:first-of-type { background: #667eea; color: white; }
 .install-banner button:last-of-type { background: transparent; color: #999; }
 
+/* ==================== 钓鱼记录 ==================== */
+.record-empty {
+    text-align: center; padding: 20px; color: #999; font-size: 13px;
+}
+.record-item {
+    display: flex; gap: 12px; padding: 12px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+.record-item:last-child { border-bottom: none; }
+.record-date {
+    flex-shrink: 0; width: 50px; text-align: center;
+}
+.record-date-day {
+    font-size: 20px; font-weight: 700; color: #333; line-height: 1;
+}
+.record-date-month {
+    font-size: 11px; color: #999; margin-top: 2px;
+}
+.record-info { flex: 1; }
+.record-fish {
+    font-size: 14px; font-weight: 600; color: #333; margin-bottom: 2px;
+}
+.record-detail {
+    font-size: 12px; color: #888; line-height: 1.6;
+}
+.record-detail span { margin-right: 8px; }
+.record-weight {
+    flex-shrink: 0; text-align: right;
+}
+.record-weight-num {
+    font-size: 18px; font-weight: 700; color: #e17055;
+}
+.record-weight-unit {
+    font-size: 11px; color: #999;
+}
+.record-actions {
+    flex-shrink: 0; display: flex; flex-direction: column; justify-content: center; gap: 4px;
+}
+.record-del-btn {
+    background: none; border: none; color: #ccc; font-size: 16px;
+    cursor: pointer; padding: 4px;
+}
+.record-del-btn:active { color: #ef4444; }
+
 /* ==================== 动画 ==================== */
 @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
 .loading { animation: pulse 1.5s infinite; }

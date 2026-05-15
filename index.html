@@ -263,8 +263,64 @@
                         </div>
                     </div>
                 </section>
+                <!-- 添加记录按钮 -->
                 <section class="panel">
-                    <h2>📊 钓鱼记录</h2>
+                    <button class="btn-primary" onclick="showAddRecordForm()" style="margin-bottom:12px;">➕ 添加钓鱼记录</button>
+                    <!-- 添加记录表单（默认隐藏） -->
+                    <div id="add-record-form" style="display:none;">
+                        <div class="form-group">
+                            <label>📅 日期</label>
+                            <input type="date" id="record-date">
+                        </div>
+                        <div class="form-row-2">
+                            <div class="form-group">
+                                <label>📍 钓点</label>
+                                <input type="text" id="record-location" placeholder="钓点名称">
+                            </div>
+                            <div class="form-group">
+                                <label>🌤️ 天气</label>
+                                <select id="record-weather">
+                                    <option value="晴">晴</option>
+                                    <option value="多云">多云</option>
+                                    <option value="阴">阴</option>
+                                    <option value="小雨">小雨</option>
+                                    <option value="大风">大风</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row-2">
+                            <div class="form-group">
+                                <label>🐟 鱼种</label>
+                                <input type="text" id="record-fish-type" placeholder="如：鲫鱼">
+                            </div>
+                            <div class="form-group">
+                                <label>⚖️ 重量(斤)</label>
+                                <input type="number" id="record-weight" placeholder="0" step="0.1">
+                            </div>
+                        </div>
+                        <div class="form-row-2">
+                            <div class="form-group">
+                                <label>📏 数量(条)</label>
+                                <input type="number" id="record-count" placeholder="0" step="1">
+                            </div>
+                            <div class="form-group">
+                                <label>🪱 饵料</label>
+                                <input type="text" id="record-bait" placeholder="使用的饵料">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>📝 备注</label>
+                            <textarea id="record-note" rows="2" placeholder="记录心得体会..." style="width:100%;padding:8px;border:1.5px solid #e8e8e8;border-radius:8px;font-size:13px;resize:none;"></textarea>
+                        </div>
+                        <div style="display:flex;gap:8px;margin-top:8px;">
+                            <button class="btn-primary" onclick="saveRecord()" style="flex:2;">💾 保存记录</button>
+                            <button class="btn-save" onclick="hideAddRecordForm()" style="flex:1;background:#dfe6e9;color:#666;">取消</button>
+                        </div>
+                    </div>
+                </section>
+                <!-- 统计概览 -->
+                <section class="panel">
+                    <h2>📊 钓鱼统计</h2>
                     <div class="stats-grid">
                         <div class="stat-card">
                             <span class="stat-num" id="stat-total">0</span>
@@ -278,6 +334,16 @@
                             <span class="stat-num" id="stat-biggest">--</span>
                             <span class="stat-label">最大鱼(斤)</span>
                         </div>
+                    </div>
+                </section>
+                <!-- 记录列表 -->
+                <section class="panel">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                        <h2 style="margin-bottom:0;">📋 钓鱼记录</h2>
+                        <button onclick="clearAllRecords()" style="background:none;border:none;color:#ef4444;font-size:12px;cursor:pointer;">清空</button>
+                    </div>
+                    <div id="record-list">
+                        <div class="record-empty">暂无记录，点击上方按钮添加</div>
                     </div>
                 </section>
                 <section class="panel">

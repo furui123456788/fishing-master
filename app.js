@@ -826,9 +826,141 @@ function generateShareText() {
     return `🎣 又上鱼啦！\n📍 ${loc}\n🐟 ${ft} ${fw}斤\n${txt ? '💭 ' + txt : ''}\n#钓鱼`;
 }
 
+// ==================== 钓鱼记录管理 ====================
+const STORAGE_KEY_RECORDS = 'fishing_records';
+
+function getRecords() {
+    try {
+        return JSON.parse(localStorage.getItem(STORAGE_KEY_RECORDS)) || [];
+    } catch(e) { return []; }
+}
+
+function saveRecords(records) {
+    localStorage.setItem(STORAGE_KEY_RECORDS, JSON.stringify(records));
+}
+
+function showAddRecordForm() {
+    const form = document.getElementById('add-record-form');
+    form.style.display = 'block';
+    // 默认日期为今天
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('record-date').value = today;
+}
+
+function hideAddRecordForm() {
+    document.getElementById('add-record-form').style.display = 'none';
+}
+
+function saveRecord() {
+    const date = document.getElementById('record-date').value;
+    const location = document.getElementById('record-location').value.trim();
+    const weather = document.getElementById('record-weather').value;
+    const fishType = document.getElementById('record-fish-type').value.trim();
+    const weight = parseFloat(document.getElementById('record-weight').value) || 0;
+    const count = parseInt(document.getElementById('record-count').value) || 0;
+    const bait = document.getElementById('record-bait').value.trim();
+    const note = document.getElementById('record-note').value.trim();
+
+    if (!date) { alert('请选择日期'); return; }
+    if (!fishType) { alert('请填写鱼种'); return; }
+
+    const record = {
+        id: Date.now(),
+        date, location, weather, fishType, weight, count, bait, note,
+        createdAt: new Date().toISOString()
+    };
+
+    const records = getRecords();
+    records.unshift(record); // 最新的在前面
+    saveRecords(records);
+
+    // 清空表单
+    document.getElementById('record-location').value = '';
+    document.getElementById('record-fish-type').value = '';
+    document.getElementById('record-weight').value = '';
+    document.getElementById('record-count').value = '';
+    document.getElementById('record-bait').value = '';
+    document.getElementById('record-note').value = '';
+    hideAddRecordForm();
+
+    renderRecords();
+    updateStats();
+}
+
+function deleteRecord(id) {
+    if (!confirm('确定删除这条记录？')) return;
+    const records = getRecords().filter(r => r.id !== id);
+    saveRecords(records);
+    renderRecords();
+    updateStats();
+}
+
+function clearAllRecords() {
+    if (!confirm('确定清空所有记录？此操作不可恢复！')) return;
+    saveRecords([]);
+    renderRecords();
+    updateStats();
+}
+
+function renderRecords() {
+    const records = getRecords();
+    const container = document.getElementById('record-list');
+
+    if (records.length === 0) {
+        container.innerHTML = '<div class="record-empty">暂无记录，点击上方按钮添加</div>';
+        return;
+    }
+
+    container.innerHTML = records.map(r => {
+        const d = new Date(r.date);
+        const day = d.getDate();
+        const month = (d.getMonth() + 1) + '月';
+        const weatherEmoji = { '晴':'☀️', '多云':'⛅', '阴':'☁️', '小雨':'🌧️', '大风':'💨' }[r.weather] || '';
+        const detailParts = [];
+        if (r.location) detailParts.push(`📍${r.location}`);
+        if (r.weather) detailParts.push(`${weatherEmoji}`);
+        if (r.count > 0) detailParts.push(`${r.count}条`);
+        if (r.bait) detailParts.push(`🪱${r.bait}`);
+
+        return `
+            <div class="record-item">
+                <div class="record-date">
+                    <div class="record-date-day">${day}</div>
+                    <div class="record-date-month">${month}</div>
+                </div>
+                <div class="record-info">
+                    <div class="record-fish">🐟 ${r.fishType}</div>
+                    <div class="record-detail">${detailParts.map(p => `<span>${p}</span>`).join('')}</div>
+                    ${r.note ? `<div class="record-detail" style="color:#666;margin-top:2px;">📝 ${r.note}</div>` : ''}
+                </div>
+                <div class="record-weight">
+                    ${r.weight > 0 ? `<div class="record-weight-num">${r.weight}</div><div class="record-weight-unit">斤</div>` : '<div style="color:#ccc;font-size:12px;">--</div>'}
+                </div>
+                <div class="record-actions">
+                    <button class="record-del-btn" onclick="deleteRecord(${r.id})">🗑️</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function updateStats() {
+    const records = getRecords();
+    const totalCount = records.length;
+    const totalFish = records.reduce((sum, r) => sum + (r.count || 0), 0);
+    const biggest = records.reduce((max, r) => Math.max(max, r.weight || 0), 0);
+
+    document.getElementById('stat-total').textContent = totalCount;
+    document.getElementById('stat-fish').textContent = totalFish;
+    document.getElementById('stat-biggest').textContent = biggest > 0 ? biggest : '--';
+}
+
 // ==================== 初始化 ====================
 document.addEventListener('DOMContentLoaded', () => {
     useMockWeatherData();
+    // 加载钓鱼记录
+    renderRecords();
+    updateStats();
     // 自动尝试定位
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
