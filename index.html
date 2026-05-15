@@ -164,6 +164,13 @@
             <div class="page" id="page-ai">
                 <section class="panel">
                     <h2>🤖 AI 浮漂识别</h2>
+                    <!-- 分析结果放在摄像头上面 -->
+                    <div id="ai-analysis" class="ai-result ai-result-top">
+                        <div class="ai-placeholder">
+                            <span class="ai-icon">🔍</span>
+                            <p>开启摄像头后，AI 将实时分析浮漂动作</p>
+                        </div>
+                    </div>
                     <div class="camera-wrapper" id="camera-container">
                         <video id="camera-video" autoplay playsinline muted></video>
                         <canvas id="camera-canvas" style="display:none;"></canvas>
@@ -190,15 +197,6 @@
                         </div>
                         <div class="photo-zoom-body" id="photo-zoom-body">
                             <img id="zoom-image" src="" alt="放大查看">
-                        </div>
-                    </div>
-                </section>
-                <section class="panel">
-                    <h2>📋 识别结果</h2>
-                    <div id="ai-analysis" class="ai-result">
-                        <div class="ai-placeholder">
-                            <span class="ai-icon">🔍</span>
-                            <p>开启摄像头后，AI 将实时分析浮漂动作</p>
                         </div>
                     </div>
                 </section>

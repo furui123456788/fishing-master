@@ -250,6 +250,18 @@ body {
 
 /* AI 结果 */
 .ai-result { min-height: 80px; position: relative; z-index: 1; }
+.ai-result-top {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-bottom: 12px;
+    color: white;
+    min-height: auto;
+}
+.ai-result-top .ai-placeholder { color: rgba(255,255,255,0.7); padding: 8px 0; }
+.ai-result-top .ai-icon { color: rgba(255,255,255,0.8); font-size: 24px; margin-bottom: 4px; }
+.ai-result-top .ai-detection-result p { color: rgba(255,255,255,0.95); font-size: 14px; line-height: 1.8; }
+.ai-result-top .ai-detection-result strong { color: #fff; }
 .ai-placeholder { text-align: center; padding: 20px; color: #999; }
 .ai-icon { font-size: 36px; display: block; margin-bottom: 8px; }
 .ai-detection-result { padding: 4px 0; }
