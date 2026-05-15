@@ -88,21 +88,88 @@ function switchRecTab(tab, btn) {
 }
 
 // ==================== 天气 ====================
+// 定位超时计时器
+let locationTimeout = null;
+let locationWatchId = null;
+
 function getLocation() {
-    if (!navigator.geolocation) { alert('浏览器不支持定位'); return; }
-    document.getElementById('location').value = '定位中...';
-    navigator.geolocation.getCurrentPosition(
+    if (!navigator.geolocation) { 
+        alert('浏览器不支持定位'); 
+        return; 
+    }
+    
+    // 清除之前的定位
+    if (locationWatchId) {
+        navigator.geolocation.clearWatch(locationWatchId);
+        locationWatchId = null;
+    }
+    if (locationTimeout) {
+        clearTimeout(locationTimeout);
+    }
+    
+    document.getElementById('location').value = '快速定位中...';
+    
+    let hasResult = false;
+    
+    // 使用 watchPosition 快速获取位置（比 getCurrentPosition 快）
+    locationWatchId = navigator.geolocation.watchPosition(
         (pos) => {
+            if (hasResult) return; // 已经获取到位置了
+            hasResult = true;
+            
+            // 清除 watch 和 timeout
+            if (locationWatchId) {
+                navigator.geolocation.clearWatch(locationWatchId);
+                locationWatchId = null;
+            }
+            if (locationTimeout) {
+                clearTimeout(locationTimeout);
+            }
+            
             const { latitude: lat, longitude: lon } = pos.coords;
             appState.location = { lat, lon };
             document.getElementById('location').value = `${lat.toFixed(2)}, ${lon.toFixed(2)}`;
             fetchWeatherData(lat, lon);
         },
-        () => {
-            document.getElementById('location').value = '定位失败，请手动输入';
-            useMockWeatherData();
+        (err) => {
+            if (hasResult) return;
+            console.error('定位错误:', err);
+        },
+        {
+            enableHighAccuracy: false, // 不需要高精度，更快
+            timeout: 5000,
+            maximumAge: 60000 // 允许使用1分钟内的缓存位置
         }
     );
+    
+    // 3秒超时，使用低精度定位或模拟数据
+    locationTimeout = setTimeout(() => {
+        if (!hasResult) {
+            // 尝试使用缓存位置或IP定位
+            tryIPLocation();
+        }
+    }, 3000);
+}
+
+// IP定位作为备选（更快但精度低）
+function tryIPLocation() {
+    // 使用 ipapi.co 免费服务获取大概位置
+    fetch('https://ipapi.co/json/', { timeout: 3000 })
+        .then(res => res.json())
+        .then(data => {
+            if (data.latitude && data.longitude) {
+                const { latitude: lat, longitude: lon } = data;
+                appState.location = { lat, lon };
+                document.getElementById('location').value = `${lat.toFixed(2)}, ${lon.toFixed(2)} (IP定位)`;
+                fetchWeatherData(lat, lon);
+            } else {
+                throw new Error('IP定位失败');
+            }
+        })
+        .catch(() => {
+            document.getElementById('location').value = '定位失败，请手动输入';
+            useMockWeatherData();
+        });
 }
 
 async function fetchWeatherData(lat, lon) {
