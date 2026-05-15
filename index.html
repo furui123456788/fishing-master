@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="钓鱼助手">
@@ -164,17 +164,33 @@
             <div class="page" id="page-ai">
                 <section class="panel">
                     <h2>🤖 AI 浮漂识别</h2>
-                    <div class="camera-wrapper">
+                    <div class="camera-wrapper" id="camera-container">
                         <video id="camera-video" autoplay playsinline muted></video>
                         <canvas id="camera-canvas" style="display:none;"></canvas>
                         <div class="camera-overlay" id="camera-overlay">
                             <span>📹 点击下方按钮开启</span>
+                        </div>
+                        <!-- 放大控制 -->
+                        <div class="zoom-controls" id="zoom-controls" style="display:none;">
+                            <button class="zoom-btn" onclick="cameraZoom(1)">🔍+</button>
+                            <span class="zoom-level" id="zoom-level">1x</span>
+                            <button class="zoom-btn" onclick="cameraZoom(-1)">🔍-</button>
                         </div>
                     </div>
                     <div class="camera-btns">
                         <button class="cam-btn cam-start" onclick="startCamera()">开启摄像头</button>
                         <button class="cam-btn cam-capture" onclick="captureFrame()">📸 拍照</button>
                         <button class="cam-btn cam-stop" onclick="stopCamera()">关闭</button>
+                    </div>
+                    <!-- 拍照放大查看 -->
+                    <div class="photo-zoom-viewer" id="photo-zoom-viewer" style="display:none;">
+                        <div class="photo-zoom-header">
+                            <span>🔍 双指缩放查看</span>
+                            <button onclick="closeZoomViewer()">✕ 关闭</button>
+                        </div>
+                        <div class="photo-zoom-body" id="photo-zoom-body">
+                            <img id="zoom-image" src="" alt="放大查看">
+                        </div>
                     </div>
                 </section>
                 <section class="panel">

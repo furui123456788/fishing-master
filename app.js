@@ -331,14 +331,19 @@ function genTech(c) {
 }
 
 // ==================== AI 浮漂识别 ====================
+let currentZoom = 1;
+const ZOOM_LEVELS = [1, 1.5, 2, 3, 4, 5];
+let zoomIndex = 0;
+
 async function startCamera() {
     try {
         const stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+            video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }
         });
         appState.currentStream = stream;
         document.getElementById('camera-video').srcObject = stream;
         document.getElementById('camera-overlay').style.display = 'none';
+        document.getElementById('zoom-controls').style.display = 'flex';
         startAIAnalysis();
     } catch {
         alert('无法访问摄像头，请检查权限');
@@ -352,6 +357,20 @@ function stopCamera() {
     }
     document.getElementById('camera-video').srcObject = null;
     document.getElementById('camera-overlay').style.display = 'flex';
+    document.getElementById('zoom-controls').style.display = 'none';
+    currentZoom = 1;
+    zoomIndex = 0;
+    document.getElementById('zoom-level').textContent = '1x';
+}
+
+function cameraZoom(direction) {
+    zoomIndex = Math.max(0, Math.min(ZOOM_LEVELS.length - 1, zoomIndex + direction));
+    currentZoom = ZOOM_LEVELS[zoomIndex];
+    document.getElementById('zoom-level').textContent = currentZoom + 'x';
+    
+    const video = document.getElementById('camera-video');
+    video.style.transform = `scale(${currentZoom})`;
+    video.style.transformOrigin = 'center center';
 }
 
 function captureFrame() {
@@ -361,6 +380,10 @@ function captureFrame() {
     c.width = v.videoWidth; c.height = v.videoHeight;
     ctx.drawImage(v, 0, 0);
     analyzeFloatMovement(c);
+    
+    // 保存截图并打开放大查看
+    const dataUrl = c.toDataURL('image/jpeg', 0.95);
+    openZoomViewer(dataUrl);
 }
 
 function startAIAnalysis() {
@@ -415,6 +438,82 @@ function analyzeFloatMovement(canvas) {
     ];
     const r = list[Math.floor(Math.random() * list.length)];
     el.innerHTML = `<div class="ai-detection-result"><h4>📸 分析结果</h4><p><strong>动作：</strong>${r.a}</p><p><strong>描述：</strong>${r.d}</p><p><strong>鱼种：</strong>${r.f}</p><p><strong>置信度：</strong>${r.c}%</p><p><strong>建议：</strong>${r.c > 80 ? '立即提竿！' : '继续观察'}</p></div>`;
+}
+
+// ==================== 放大查看器 ====================
+let zoomViewerScale = 1;
+let zoomViewerLastDist = 0;
+let zoomViewerStartX = 0, zoomViewerStartY = 0;
+let zoomViewerTranslateX = 0, zoomViewerTranslateY = 0;
+
+function openZoomViewer(imageSrc) {
+    const viewer = document.getElementById('photo-zoom-viewer');
+    const img = document.getElementById('zoom-image');
+    img.src = imageSrc;
+    viewer.style.display = 'flex';
+    zoomViewerScale = 1;
+    zoomViewerTranslateX = 0;
+    zoomViewerTranslateY = 0;
+    updateZoomViewerTransform();
+    initZoomViewerGestures();
+}
+
+function closeZoomViewer() {
+    document.getElementById('photo-zoom-viewer').style.display = 'none';
+}
+
+function updateZoomViewerTransform() {
+    const img = document.getElementById('zoom-image');
+    img.style.transform = `translate(${zoomViewerTranslateX}px, ${zoomViewerTranslateY}px) scale(${zoomViewerScale})`;
+}
+
+function initZoomViewerGestures() {
+    const body = document.getElementById('photo-zoom-body');
+    const img = document.getElementById('zoom-image');
+    
+    // 双指缩放
+    body.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 2) {
+            zoomViewerLastDist = Math.hypot(
+                e.touches[0].clientX - e.touches[1].clientX,
+                e.touches[0].clientY - e.touches[1].clientY
+            );
+        } else if (e.touches.length === 1) {
+            zoomViewerStartX = e.touches[0].clientX - zoomViewerTranslateX;
+            zoomViewerStartY = e.touches[0].clientY - zoomViewerTranslateY;
+        }
+    }, { passive: true });
+
+    body.addEventListener('touchmove', (e) => {
+        if (e.touches.length === 2) {
+            e.preventDefault();
+            const dist = Math.hypot(
+                e.touches[0].clientX - e.touches[1].clientX,
+                e.touches[0].clientY - e.touches[1].clientY
+            );
+            const scale = dist / zoomViewerLastDist;
+            zoomViewerScale = Math.max(1, Math.min(10, zoomViewerScale * scale));
+            zoomViewerLastDist = dist;
+            updateZoomViewerTransform();
+        } else if (e.touches.length === 1 && zoomViewerScale > 1) {
+            e.preventDefault();
+            zoomViewerTranslateX = e.touches[0].clientX - zoomViewerStartX;
+            zoomViewerTranslateY = e.touches[0].clientY - zoomViewerStartY;
+            updateZoomViewerTransform();
+        }
+    }, { passive: false });
+
+    // 双击放大
+    body.addEventListener('dblclick', () => {
+        if (zoomViewerScale > 1) {
+            zoomViewerScale = 1;
+            zoomViewerTranslateX = 0;
+            zoomViewerTranslateY = 0;
+        } else {
+            zoomViewerScale = 3;
+        }
+        updateZoomViewerTransform();
+    });
 }
 
 // ==================== 照片编辑 ====================
