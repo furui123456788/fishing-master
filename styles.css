@@ -189,9 +189,14 @@ body {
 /* ==================== 摄像头 ==================== */
 .camera-wrapper {
     position: relative; width: 100%; aspect-ratio: 4/3;
-    background: #1a1a2e; border-radius: 10px; overflow: hidden;
+    background: #1a1a2e; border-radius: 10px;
+    overflow: visible !important; /* 允许放大后溢出显示 */
+    z-index: 10; /* 确保放大时不被遮挡 */
 }
-.camera-wrapper video { width: 100%; height: 100%; object-fit: cover; }
+.camera-wrapper video { 
+    width: 100%; height: 100%; object-fit: cover; 
+    border-radius: 10px;
+}
 .camera-overlay {
     position: absolute; inset: 0;
     display: flex; align-items: center; justify-content: center;
@@ -244,7 +249,7 @@ body {
 }
 
 /* AI 结果 */
-.ai-result { min-height: 80px; }
+.ai-result { min-height: 80px; position: relative; z-index: 1; }
 .ai-placeholder { text-align: center; padding: 20px; color: #999; }
 .ai-icon { font-size: 36px; display: block; margin-bottom: 8px; }
 .ai-detection-result { padding: 4px 0; }
